@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.pagination {
+    @apply flex items-center border-l border-t border-black;
+}
+
+li.page-item .page-link {
+    @apply w-8 h-8 border-r border-b border-black flex items-center justify-center;
+}
+
+li.page-item.active {
+    @apply bg-black text-white;
+}
+li.page-item.disabled {
+    @apply bg-gray-300;
+}
+
+.wrapper {
+    position: relative;
+    display: inline-block;
+    border: none;
+}
+
+.wrapper input {
+    border: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    position: absolute !important;
+    clip: rect(1px 1px 1px 1px);
+    clip: rect(1px, 1px, 1px, 1px);
+    opacity: 0;
+}
+
+.wrapper label {
+    position: relative;
+    float: right;
+    color: #c8c8c8;
+}
+
+.wrapper label:before {
+    @apply inline-block select-none text-2xl text-gray-200;
+    content: "\2605";
+}
+
+.wrapper input:checked ~ label:before {
+    color: #ffc107;
+}
+
+.wrapper label:hover ~ label:before {
+    color: #ffdb70;
+}
+
+.wrapper label:hover:before {
+    color: #ffc107;
+}

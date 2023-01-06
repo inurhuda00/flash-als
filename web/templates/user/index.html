@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+<br />
+{% block content %}
+<br />
+
+<div class="mx-auto max-w-7xl overflow-hidden sm:px-6 lg:px-8">
+    <h2 class="text-lg font-medium text-gray-900">Semua User</h2>
+</div>
+
+{% for user in users %}
+<span>{{ user.CustomerID }}</span>
+<span>{{ user.Name }}</span>
+{% endfor %}
+
+<br />
+{% endblock %}

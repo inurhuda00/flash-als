@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Flask ALS</title>
+        <link rel="stylesheet" href="{{url_for('static',filename='dist/css/output.css')}}" />
+    </head>
+    <body>
+        {% include "layouts/header.html" %} {% for message in get_flashed_messages() %}
+        <span class="flex justify-center items-center bg-orange-100 h-8"> {{ message }} </span>
+        {% endfor %} {% block content %} {% endblock %}
+
+        <hr />
+
+        {% include "layouts/footer.html" %}
+
+        <script>
+            let movies_stars = {{ g.stars | safe}}
+
+            movies_stars.forEach((star) => {
+                movie = document.getElementById([star.movieId, star.rating].join("-"))
+
+                if(movie) movie.checked = true
+            })
+        </script>
+
+        <script src="{{url_for('static',filename='js/script.js')}}"></script>
+    </body>
+</html>
