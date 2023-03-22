@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
-from json import dumps, loads
+from json import dumps
 
 
 def scrapeMovie(url):
@@ -27,7 +27,7 @@ def scrapeMovie(url):
         'div', class_='ipc-media').select("img")[0].attrs['srcset'].split(" ")[-2:-1][0]
 
     rating = wrapper.select(
-        "div.sc-db8c1937-0.eGmDjE.sc-80d4314-3.iBtAhY > div > div:nth-child(1) > a > div > div > div.sc-7ab21ed2-0.fAePGh > div.sc-7ab21ed2-2.kYEdvH > span.sc-7ab21ed2-1.jGRxWM")[0].text
+        "div.sc-db8c1937-0.sc-80d4314-3 > div > div:nth-child(1) > a > div > div > div.sc-7ab21ed2-0 > div.sc-7ab21ed2-2 > span.sc-7ab21ed2-1")[0].text
 
     # request to plot webpage
     response = requests.get(url+'plotsummary')
@@ -42,12 +42,9 @@ def scrapeMovie(url):
 
     arr = [imdbId, title, year, poster, rating, summary, time, genres]
 
-    data = dumps(json)
-
-    return data
+    # dumps and loads for save
+    return dumps(json)
 
 
 if __name__ == "__main__":
-    # print(scrapeMovie("https://www.imdb.com/title/tt8108164/"))
-    print(scrapeMovie("https://www.imdb.com/title/tt8108164/"))
-    # print("https://www.imdb.com/title/tt0468569/".split('/')[-2][2:])
+    print(scrapeMovie("https://www.imdb.com/title/tt0073812/"))

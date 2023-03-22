@@ -1,6 +1,7 @@
 {
     "scripts": {
-        "watch": "npx tailwindcss -i ./static/input.css -o ./static/dist/css/output.css --watch"
+        "watch": "npx tailwindcss -i ./static/input.css -o ./static/dist/css/output.css --watch",
+        "minify": "npx tailwindcss -i ./static/input.css -o ./static/dist/css/output.css --minify"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.3",

@@ -1,5 +1,4 @@
 import os
-import pymongo
 
 # Each Flask web application contains a secret key which used to sign session cookies for protection against cookie data tampering.
 SECRET_KEY = os.urandom(32)

@@ -32,9 +32,10 @@ db = client['imdb']
 moviesCollection = db["movies"]
 usersCollection = db["users"]
 ratingsCollection = db["ratings"]
+recsCollection = db["recommendations"]
 
 # global recEngine
-# recEngine = RecommendationALS()
+recEngine = RecommendationALS()
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -70,9 +71,9 @@ def required_rating(fn):
     def wrapper(*args, **kwargs):
         if session.get('logged_in'):
             if len(g.stars) < 5:
-                flash(
-                    f"Berikan {5 - len(g.stars)} film rating, untuk lanjut!")
+                flash(f"Berikan {5 - len(g.stars)} film rating, untuk lanjut!")
                 return redirect(url_for("ask"))
+
         return fn(*args, **kwargs)
     return wrapper
 
@@ -125,20 +126,30 @@ def current_ratings():
             {"userId": g.user["userId"]}, {'_id': 0})
         g.stars = list(stars)
 
+        recs = recsCollection.find_one({'userId': g.user["userId"]})
+
+        if recs is None:
+            session['add_ratings'] = True
+
 
 @app.route('/')
 @required_rating
 def home():
     movies = moviesCollection.find().limit(8)
-    recs = moviesCollection.find().limit(8)
+    recs = []
+    if session.get('logged_in'):
+        recs = recsCollection.find_one({'userId': g.user["userId"]})
+        if recs is not None:
+            recs = recEngine.get_joins_movies(list(recs['recommendations']))
+        else:
+            recs = []
 
     ratings_added = session.get('add_ratings')
-    print(ratings_added)
+
     if ratings_added is None:
         ratings_added = False
 
     train = ratings_added if not ratings_added else ratings_added
-    print(train)
 
     return render_template('index.html', recs=list(recs), movies=list(movies), train=train)
 
@@ -180,27 +191,35 @@ def logout():
     return redirect(url_for('home'))
 
 
-# @app.route('/recomendations')
-# @required_login
-# def recomendations():
-#     if len(g.stars) < 5:
-#         flash("Provide some ratings, min 5 items ")
-#         return redirect(url_for('movies'))
+@app.route('/recomendations')
+@required_login
+def recomendations():
 
-#     stars = convertStars(g.stars)
+    ratings_added = session.get('add_ratings')
 
-#     recEngine.add_ratings(ratings=stars)
-#     recEngine.get_sparsity()
+    print(ratings_added)
 
-#     movies, user_ratings = recEngine.get_recs_users(user_id=g.user['userId'])
+    if ratings_added:
+        return redirect(url_for("home"))
 
-#     # movies = moviesCollection.find({'movieId': {'$in': movieIds}})
+    recs = recsCollection.find_one({'userId': g.user["userId"]})
 
-#     return render_template('recomendations.html', movies=list(movies), user_ratings=list(user_ratings))
+    if recs is not None:
+        recs = recEngine.get_joins_movies(list(recs['recommendations']))
+    else:
+        recs = []
+
+    stars = ratingsCollection.find({}, {'_id': 0})
+    new_stars = convertStars(list(stars))
+
+    user_ratings = recEngine.get_joins_new_ratings(
+        user_id=g.user['userId'], new_ratings=new_stars)
+
+    return render_template('recomendations.html', movies=list(user_ratings), recs=list(recs))
+
 
 @app.route('/movies', defaults={"page": 1})
 @app.route('/movies/<page>')
-@required_login
 @required_rating
 def movies(page, genre=None, q=None):
 
@@ -215,7 +234,7 @@ def movies(page, genre=None, q=None):
 
     print(search, genre)
 
-    page, per_page, offset = get_page_args(per_page=24)
+    page, per_page, offset = get_page_args(per_page=8)
 
     if genre is not None:
         query = {"genres": genre}
@@ -275,8 +294,8 @@ def add_rating():
         )
         session['add_ratings'] = True
     else:
-        ratingsCollection.update_one({"movieId": movieId}, {
-            "$set": {"rating": rating}})
+        ratingsCollection.update_one({"userId": g.user['userId'], "movieId": movieId},
+                                     {"$set": {"rating": rating}})
 
     g.stars = g.stars.append(
         {"userId": g.user['userId'], "movieId": movieId, "rating": rating})
@@ -290,8 +309,11 @@ def update_rating():
     movieId = request.get_json()['movieId']
     rating = request.get_json()['rating']
 
-    ratingsCollection.update_one({"movieId": movieId}, {
-                                 "$set": {"rating": rating}})
+    ratingsCollection.update_one({"userId": g.user['userId'], "movieId": movieId},
+                                 {"$set": {"rating": rating}})
+
+    # print({"userId": g.user['userId'], "movieId": movieId})
+    session['add_ratings'] = True
 
     return jsonify({"status": "ok"})
 
@@ -312,7 +334,7 @@ def ask(page, genre=None, q=None):
 
     print(search, genre)
 
-    page, per_page, offset = get_page_args(per_page=24)
+    page, per_page, offset = get_page_args(per_page=8)
 
     if genre is not None:
         query = {"genres": genre}
@@ -359,9 +381,25 @@ def ask(page, genre=None, q=None):
 
 @app.route("/fetching", methods=['POST'])
 def fetching():
-    waitSec = request.get_json()['time']
     session['add_ratings'] = False
-    time.sleep(waitSec)
+
+    stars = ratingsCollection.find({}, {'_id': 0})
+    new_stars = convertStars(list(stars))
+
+    recEngine.add_ratings(ratings=new_stars)
+    recEngine.get_sparsity()
+
+    cursor = usersCollection.find({}, {'userId': 1, '_id': 0})
+
+    usersIds = []
+    for item in cursor:
+        if 'userId' in item:
+            usersIds.append(item['userId'])
+
+    usersSubsetRecs = recEngine.get_recs_users_all(users=usersIds)
+
+    recsCollection.drop()
+    recsCollection.insert_many(usersSubsetRecs)
     return jsonify({"status": "ok"})
 
 

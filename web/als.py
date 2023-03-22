@@ -27,9 +27,9 @@ class RecommendationALS:
             .drop('timestamp')
 
         # training model
-        self.rank = 100
-        self.maxIter = 10
-        self.regParam = 0.15
+        self.rank = 20
+        self.maxIter = 8
+        self.regParam = 0.14
         self.__train_model()
 
     def __train_model(self):
@@ -71,6 +71,26 @@ class RecommendationALS:
 
         print(f"{sparsity} sparse")
 
+    def get_joins_movies(self, recommendations):
+        df = self.spark.createDataFrame(recommendations, ["movieId", "rating"])
+        recommendations = df.join(self.movies, on='movieId')
+
+        # return recommendations, movie rated
+        return recommendations.toPandas().to_dict('records')
+
+    def get_joins_new_ratings(self, user_id, new_ratings):
+        # format userId, movieId, rating
+        # new_ratings into dataframe base on ratings column
+        new_user_ratings = self.spark.createDataFrame(
+            new_ratings, self.ratings.columns)
+        # new_user_ratings.show()
+        self.new_ratings = new_user_ratings
+
+        user_ratings = self.new_ratings.join(self.movies, on='movieId').filter(
+            f'userId = {user_id}').sort('rating', ascending=False)
+
+        return user_ratings.toPandas().to_dict('records')
+
     def get_recs_users(self, user_id):
         user_id = int(user_id)
         users = self.spark.createDataFrame(
@@ -88,9 +108,14 @@ class RecommendationALS:
         recommendations = recommendations.join(self.movies, on='movieId').filter(
             f'userId = {user_id}')
 
-        df_user_ratings = user_ratings.toPandas()
-        df = recommendations.toPandas()
-        return df.to_dict('records'), df_user_ratings.to_dict('records')
+        # return recommendation, movies
+        return recommendations.toPandas().to_dict('records'), user_ratings.toPandas().to_dict('records')
+
+    def get_recs_users_all(self, users):
+        users = self.spark.createDataFrame(users, IntegerType()).toDF('userId')
+        usersSubsetRecs = self.model.recommendForUserSubset(users, 8)
+
+        return usersSubsetRecs.toPandas().to_dict('records')
 
     def samples(self, user_id, num_ratings):
         samples = self.ratings.sample(False, .001, seed=20).collect()
@@ -120,5 +145,7 @@ class RecommendationALS:
 
 
 if __name__ == "__main__":
+
     recomendation = RecommendationALS()
-    recomendation.samples(user_id=2138, num_ratings=5)
+    # recomendation.samples(user_id=2138, num_ratings=5)
+    recomendation.get_recs_users_all([148, 4])
