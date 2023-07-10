@@ -1,5 +1,7 @@
 # Recomendation Systems Using Alternating Least Square With Pyspark, Implemented on Flask Framework
 
+![](https://github.com/inurhuda00/flask-als/blob/main/demo.gif)
+
 - **Framework**: Flask
     - flask_bcrypt
     - flask_wtf
